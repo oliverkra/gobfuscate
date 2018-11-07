@@ -30,7 +30,7 @@ func ObfuscateSymbols(gopath string, enc *Encrypter, prefixFilter []string) erro
 	if err := runRenames(gopath, renames); err != nil {
 		return fmt.Errorf("top-level renaming: %s", err)
 	}
-	renames, err = methodRenames(gopath, enc)
+	renames, err = methodRenames(gopath, enc, prefixFilter)
 	if err != nil {
 		return fmt.Errorf("method renames: %s", err)
 	}
@@ -81,7 +81,7 @@ func topLevelRenames(gopath string, enc *Encrypter, prefixFilter []string) ([]sy
 			return err
 		}
 		pkgPath = filepath.ToSlash(pkgPath)
-		if !hasPrefix(prefixFilter, pkgPath) {
+		if !validPkg(prefixFilter, pkgPath) {
 			return filepath.SkipDir
 		}
 
@@ -114,7 +114,7 @@ func topLevelRenames(gopath string, enc *Encrypter, prefixFilter []string) ([]sy
 	return singleRenames(res), err
 }
 
-func methodRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
+func methodRenames(gopath string, enc *Encrypter, prefixFilter []string) ([]symbolRenameReq, error) {
 	exclude, err := interfaceMethods(gopath)
 	if err != nil {
 		return nil, err
@@ -137,6 +137,10 @@ func methodRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
 			return err
 		}
 		pkgPath = filepath.ToSlash(pkgPath)
+		if !validPkg(prefixFilter, pkgPath) {
+			return filepath.SkipDir
+		}
+
 		set := token.NewFileSet()
 		file, err := parser.ParseFile(set, path, nil, 0)
 		if err != nil {
@@ -293,7 +297,7 @@ func containsIgnoreConstraint(path string) bool {
 	return false
 }
 
-func hasPrefix(prefixFilter []string, pkgPath string) bool {
+func validPkg(prefixFilter []string, pkgPath string) bool {
 	for _, v := range prefixFilter {
 		if v == "*" || strings.Contains(pkgPath, v) {
 			return true

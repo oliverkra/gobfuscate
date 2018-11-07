@@ -40,7 +40,10 @@ func main() {
 		encKey = string(buf)
 	}
 
-	pkgFilters := append(strings.Split(pkgsList, ","), pkgName)
+	pkgFilters := []string{pkgName}
+	if pkgsList != "" {
+		pkgFilters = append(pkgFilters, strings.Split(pkgsList, ",")...)
+	}
 	if !obfuscate(keepTests, outputGopath, encKey, pkgName, outPath, pkgFilters) {
 		os.Exit(1)
 	}

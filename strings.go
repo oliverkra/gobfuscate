@@ -36,7 +36,10 @@ func ObfuscateStrings(gopath string) error {
 			return err
 		}
 
-		obfuscator := &stringObfuscator{Contents: contents}
+		obfuscator := &stringObfuscator{
+			Contents: contents,
+			Casts:    map[*ast.BasicLit]ast.Expr{},
+		}
 		for _, decl := range file.Decls {
 			ast.Walk(obfuscator, decl)
 		}
@@ -51,10 +54,24 @@ func ObfuscateStrings(gopath string) error {
 type stringObfuscator struct {
 	Contents []byte
 	Nodes    []*ast.BasicLit
+	Casts    map[*ast.BasicLit]ast.Expr
 }
 
 func (s *stringObfuscator) Visit(n ast.Node) ast.Visitor {
-	if lit, ok := n.(*ast.BasicLit); ok {
+	if decl, ok := n.(*ast.ValueSpec); ok {
+		for _, n := range decl.Values {
+			if lit, ok := n.(*ast.BasicLit); ok {
+				if lit.Kind == token.STRING {
+					if decl.Type != nil {
+						s.Casts[lit] = decl.Type
+					}
+					s.Nodes = append(s.Nodes, lit)
+				}
+			}
+		}
+
+		return nil
+	} else if lit, ok := n.(*ast.BasicLit); ok {
 		if lit.Kind == token.STRING {
 			s.Nodes = append(s.Nodes, lit)
 		}
@@ -90,7 +107,7 @@ func (s *stringObfuscator) Obfuscate() ([]byte, error) {
 		startIdx := node.Pos() - 1
 		endIdx := node.End() - 1
 		result.Write(data[lastIndex:startIdx])
-		result.Write(obfuscatedStringCode(strVal))
+		result.Write(obfuscatedStringCode(strVal, s.Casts[node]))
 		lastIndex = int(endIdx)
 	}
 	result.Write(data[lastIndex:])
@@ -109,9 +126,15 @@ func (s *stringObfuscator) Less(i, j int) bool {
 	return s.Nodes[i].Pos() < s.Nodes[j].Pos()
 }
 
-func obfuscatedStringCode(str string) []byte {
+func obfuscatedStringCode(str string, cast ast.Expr) []byte {
 	var res bytes.Buffer
-	res.WriteString("(func() string {\n")
+	stringType := "string"
+	if cast != nil {
+		if ident, ok := cast.(*ast.Ident); ok {
+			stringType = ident.Name
+		}
+	}
+	res.WriteString(fmt.Sprintf("(func() %s {\n", stringType))
 	res.WriteString("mask := []byte(\"")
 	mask := make([]byte, len(str))
 	for i := range mask {
@@ -124,11 +147,11 @@ func obfuscatedStringCode(str string) []byte {
 	}
 	res.WriteString("\")\nres := make([]byte, ")
 	res.WriteString(strconv.Itoa(len(mask)))
-	res.WriteString(`)
-        for i, m := range mask {
-            res[i] = m ^ maskedStr[i]
-        }
-        return string(res)
-        }())`)
+	res.WriteString(fmt.Sprintf(`)
+		for i, m := range mask {
+			res[i] = m ^ maskedStr[i]
+		}
+		return %s(res)
+		}())`, stringType))
 	return res.Bytes()
 }

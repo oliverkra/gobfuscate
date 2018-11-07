@@ -14,6 +14,10 @@ import (
 	"github.com/oliverkra/gobfuscate/pkg/rename"
 )
 
+func init() {
+	rename.Force = true
+}
+
 const GoExtension = ".go"
 
 func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
@@ -35,20 +39,27 @@ func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
 		var gotAny bool
 		for dirPath := range resChan {
 			gotAny = true
-			if containsCGO(dirPath) {
-				continue
-			}
 			isMain := isMainPackage(dirPath)
 			encPath := encryptPackageName(dirPath, enc)
 			srcPkg, err := filepath.Rel(srcDir, dirPath)
 			if err != nil {
 				return err
 			}
-			dstPkg, err := filepath.Rel(srcDir, encPath)
-			if err != nil {
-				return err
-			}
+
+			dstPkg := srcPkg
 			srcPkg = filepath.ToSlash(srcPkg)
+
+			if containsCGO(dirPath) {
+				if err := rename.Move(&ctx, srcPkg, srcPkg+"copy", ""); err != nil {
+					return fmt.Errorf("package move: %s", err)
+				}
+				srcPkg = srcPkg + "copy"
+			} else {
+				dstPkg, err = filepath.Rel(srcDir, encPath)
+				if err != nil {
+					return err
+				}
+			}
 			dstPkg = filepath.ToSlash(dstPkg)
 
 			if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {

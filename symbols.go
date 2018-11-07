@@ -58,6 +58,9 @@ func topLevelRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
 	srcDir := filepath.Join(gopath, "src")
 	res := map[symbolRenameReq]int{}
 	addRes := func(pkgPath, name string) {
+		if name == "_" {
+			return
+		}
 		prefix := "\"" + pkgPath + "\"."
 		oldName := prefix + name
 		newName := enc.Encrypt(name)

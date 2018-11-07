@@ -125,6 +125,7 @@ func methodRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
 		if err != nil {
 			return err
 		}
+		pkgPath = filepath.ToSlash(pkgPath)
 		set := token.NewFileSet()
 		file, err := parser.ParseFile(set, path, nil, 0)
 		if err != nil {

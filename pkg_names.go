@@ -48,6 +48,8 @@ func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
 			if err != nil {
 				return err
 			}
+			dstPkg = filepath.ToSlash(dstPkg)
+
 			if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {
 				return fmt.Errorf("package move: %s", err)
 			}

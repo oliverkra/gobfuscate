@@ -67,6 +67,17 @@ func (s *stringObfuscator) Visit(n ast.Node) ast.Visitor {
 					}
 					s.Nodes = append(s.Nodes, lit)
 				}
+			} else if comp, ok := n.(*ast.CompositeLit); ok {
+				for _, n := range comp.Elts {
+					if lit, ok := n.(*ast.BasicLit); ok {
+						if lit.Kind == token.STRING {
+							if decl.Type != nil {
+								s.Casts[lit] = decl.Type
+							}
+							s.Nodes = append(s.Nodes, lit)
+						}
+					}
+				}
 			}
 		}
 

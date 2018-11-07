@@ -43,7 +43,10 @@ func ObfuscateSymbols(gopath string, enc *Encrypter) error {
 func runRenames(gopath string, renames []symbolRenameReq) error {
 	ctx := build.Default
 	ctx.GOPATH = gopath
-	for _, r := range renames {
+	count := len(renames)
+
+	for i, r := range renames {
+		fmt.Printf("Symbols remaining: (%d / %d)... ", i+1, count)
 		if err := rename.Main(&ctx, "", r.OldName, r.NewName); err != nil {
 			return err
 		}

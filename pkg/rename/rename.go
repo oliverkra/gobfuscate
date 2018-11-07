@@ -247,7 +247,6 @@ func Main(ctxt *build.Context, offsetFlag, fromFlag, to string) error {
 	}
 
 	// -- Load the program consisting of the initial package  -------------
-
 	iprog, err := loadProgram(ctxt, map[string]bool{spec.pkg: true})
 	if err != nil {
 		return err

@@ -141,8 +141,13 @@ func obfuscatedStringCode(str string, cast ast.Expr) []byte {
 	var res bytes.Buffer
 	stringType := "string"
 	if cast != nil {
-		if ident, ok := cast.(*ast.Ident); ok {
-			stringType = ident.Name
+		switch v := cast.(type) {
+		case *ast.Ident:
+			stringType = v.Name
+		case *ast.SelectorExpr:
+			if x, ok := v.X.(*ast.Ident); ok {
+				stringType = fmt.Sprintf("%s.%s", x.Name, v.Sel.Name)
+			}
 		}
 	}
 	res.WriteString(fmt.Sprintf("(func() %s {\n", stringType))

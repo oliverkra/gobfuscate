@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"go/build"
 	"go/parser"
@@ -39,7 +37,6 @@ func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
 		var gotAny bool
 		for dirPath := range resChan {
 			gotAny = true
-			isMain := isMainPackage(dirPath)
 			encPath := encryptPackageName(dirPath, enc)
 			srcPkg, err := filepath.Rel(srcDir, dirPath)
 			if err != nil {
@@ -64,11 +61,6 @@ func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
 
 			if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {
 				return fmt.Errorf("package move: %s", err)
-			}
-			if isMain {
-				if err := makeMainPackage(encPath); err != nil {
-					return fmt.Errorf("make main package %s: %s", encPath, err)
-				}
 			}
 		}
 		if !gotAny {
@@ -132,45 +124,4 @@ func isMainPackage(dir string) bool {
 		}
 	}
 	return false
-}
-
-func makeMainPackage(dir string) error {
-	listing, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	for _, item := range listing {
-		if filepath.Ext(item.Name()) != GoExtension {
-			continue
-		}
-		path := filepath.Join(dir, item.Name())
-		set := token.NewFileSet()
-		file, err := parser.ParseFile(set, path, nil, 0)
-		if err != nil {
-			return err
-		}
-		contents, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		pkgNameIdx := int(file.Package) + len("package") - 1
-		prePkg := contents[:pkgNameIdx]
-		postPkg := string(contents[pkgNameIdx:])
-
-		fields := strings.Fields(postPkg)
-		if len(fields) < 1 {
-			return errors.New("no fields after package keyword")
-		}
-		packageName := fields[0]
-
-		var newData bytes.Buffer
-		newData.Write(prePkg)
-		newData.WriteString(strings.Replace(postPkg, packageName, "main", 1))
-
-		if err := ioutil.WriteFile(path, newData.Bytes(), item.Mode()); err != nil {
-			return err
-		}
-	}
-	return nil
 }

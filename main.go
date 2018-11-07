@@ -13,10 +13,12 @@ import (
 )
 
 func main() {
+	var pkgsList string
 	var encKey string
 	var outputGopath bool
 	var keepTests bool
 
+	flag.StringVar(&pkgsList, "pkgs", "", "comma separated of packages to process symbols. example: github.com,gopkg.in/specific/pkg")
 	flag.StringVar(&encKey, "enckey", "", "rename encryption key")
 	flag.BoolVar(&outputGopath, "outdir", false, "output a full GOPATH")
 	flag.BoolVar(&keepTests, "keeptests", false, "keep _test.go files")
@@ -38,12 +40,13 @@ func main() {
 		encKey = string(buf)
 	}
 
-	if !obfuscate(keepTests, outputGopath, encKey, pkgName, outPath) {
+	pkgFilters := append(strings.Split(pkgsList, ","), pkgName)
+	if !obfuscate(keepTests, outputGopath, encKey, pkgName, outPath, pkgFilters) {
 		os.Exit(1)
 	}
 }
 
-func obfuscate(keepTests, outGopath bool, encKey, pkgName, outPath string) bool {
+func obfuscate(keepTests, outGopath bool, encKey, pkgName, outPath string, pkgFilter []string) bool {
 	var newGopath string
 	if outGopath {
 		newGopath = outPath
@@ -79,7 +82,7 @@ func obfuscate(keepTests, outGopath bool, encKey, pkgName, outPath string) bool 
 		return false
 	}
 	log.Println("Obfuscating symbols...")
-	if err := ObfuscateSymbols(newGopath, enc); err != nil {
+	if err := ObfuscateSymbols(newGopath, enc, pkgFilter); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to obfuscate symbols:", err)
 		return false
 	}

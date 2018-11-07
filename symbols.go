@@ -22,8 +22,8 @@ type symbolRenameReq struct {
 	NewName string
 }
 
-func ObfuscateSymbols(gopath string, enc *Encrypter) error {
-	renames, err := topLevelRenames(gopath, enc)
+func ObfuscateSymbols(gopath string, enc *Encrypter, prefixFilter []string) error {
+	renames, err := topLevelRenames(gopath, enc, prefixFilter)
 	if err != nil {
 		return fmt.Errorf("top-level renames: %s", err)
 	}
@@ -54,7 +54,7 @@ func runRenames(gopath string, renames []symbolRenameReq) error {
 	return nil
 }
 
-func topLevelRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
+func topLevelRenames(gopath string, enc *Encrypter, prefixFilter []string) ([]symbolRenameReq, error) {
 	srcDir := filepath.Join(gopath, "src")
 	res := map[symbolRenameReq]int{}
 	addRes := func(pkgPath, name string) {
@@ -81,6 +81,10 @@ func topLevelRenames(gopath string, enc *Encrypter) ([]symbolRenameReq, error) {
 			return err
 		}
 		pkgPath = filepath.ToSlash(pkgPath)
+		if !hasPrefix(prefixFilter, pkgPath) {
+			return filepath.SkipDir
+		}
+
 		set := token.NewFileSet()
 		file, err := parser.ParseFile(set, path, nil, 0)
 		if err != nil {
@@ -281,8 +285,17 @@ func containsIgnoreConstraint(path string) bool {
 	for _, comment := range file.Comments {
 		commentStr := strings.TrimRight(comment.Text(), "\n\r")
 		if comment.Pos() < packagePos &&
-			(commentStr == "+build ignore" ||
+			(strings.Contains(commentStr, "+build ignore") ||
 				strings.Contains(commentStr, "DO NOT EDIT")) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPrefix(prefixFilter []string, pkgPath string) bool {
+	for _, v := range prefixFilter {
+		if v == "*" || strings.Contains(pkgPath, v) {
 			return true
 		}
 	}

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/oliverkra/gobfuscate/pkg/rename"
 	"golang.org/x/tools/refactor/importgraph"
-	"golang.org/x/tools/refactor/rename"
 )
 
 var IgnoreMethods = map[string]bool{"main": true, "init": true}

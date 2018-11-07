@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/tools/refactor/rename"
+	"github.com/oliverkra/gobfuscate/pkg/rename"
 )
 
 const GoExtension = ".go"
@@ -48,6 +48,7 @@ func ObfuscatePackageNames(gopath string, enc *Encrypter) error {
 			if err != nil {
 				return err
 			}
+			srcPkg = filepath.ToSlash(srcPkg)
 			dstPkg = filepath.ToSlash(dstPkg)
 
 			if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {

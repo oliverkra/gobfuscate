@@ -299,7 +299,7 @@ func containsIgnoreConstraint(path string) bool {
 
 func validPkg(prefixFilter []string, pkgPath string) bool {
 	for _, v := range prefixFilter {
-		if v == "*" || strings.Contains(pkgPath, v) {
+		if v == "*" || strings.Contains(strings.ToLower(pkgPath), strings.ToLower(v)) {
 			return true
 		}
 	}
